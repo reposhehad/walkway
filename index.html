@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walkway Inventory Counting - POS Stock Reconciliation</title>
+  <meta name="description" content="Walkway Retail Inventory Counting and POS Stock Reconciliation">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#3978E8">
+  <meta name="application-name" content="Walkway INV">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Walkway INV">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body class="bg-[#F4F7FC] text-[#26344A] min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- App Container -->
+  <!-- Sidebar Backdrop for Mobile/Tablet Overlay -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-gray-900/40 z-30 hidden lg:hidden backdrop-blur-xs transition-opacity"></div>
+
+  <div class="flex-1 flex overflow-hidden h-screen">
+
+    <!-- Sidebar Navigation -->
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-[#DFE6F0] flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out -translate-x-full lg:static lg:translate-x-0">
+      
+      <!-- Brand Header -->
+      <div class="p-4 border-b border-[#DFE6F0] flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3978E8] to-[#8058D8] flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base font-bold leading-tight tracking-tight text-[#26344A]">WALKWAY</h1>
+            <p class="text-[11px] font-medium text-[#718096] uppercase tracking-wider">Inventory Counting</p>
+          </div>
+        </div>
+        <!-- Close button for mobile -->
+        <button id="sidebarCloseBtn" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 lg:hidden" title="Close Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Project Quick Indicator -->
+      <div class="p-3 mx-3 my-2 rounded-lg bg-[#F8FAFD] border border-[#DFE6F0]">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[11px] font-semibold text-[#718096] uppercase">Current Audit</span>
+          <span id="sidebarStatusPill" class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-[#E8F7F2] text-[#12A879]">In Progress</span>
+        </div>
+        <p id="sidebarProjectName" class="text-sm font-semibold text-[#26344A] truncate">Walkway Retail Outlet</p>
+        <div class="flex items-center justify-between mt-1 text-[11px] text-[#718096]">
+          <span id="sidebarProjectDate">Oct 2026</span>
+          <span id="sidebarSkuCount" class="font-medium text-[#3978E8]">0 SKUs</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <button id="navBtnDashboard" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#3978E8] bg-[#EEF4FE] transition-colors" data-target="viewDashboard">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Dashboard
+        </button>
+
+        <button id="navBtnBeforeInventory" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewBeforeInventory">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+          Before Inventory
+        </button>
+
+        <button id="navBtnScanning" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewScanning">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+          Physical Scanning
+        </button>
+
+        <button id="navBtnBatches" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewBatches">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          Batch Management
+        </button>
+
+        <button id="navBtnAuditAnalysis" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewAuditAnalysis">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          Audit Analysis
+        </button>
+
+        <button id="navBtnReports" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewReports">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Audit Reports
+        </button>
+
+        <button id="navBtnAdjustments" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewAdjustments">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          Adjustments
+        </button>
+
+        <button id="navBtnFinalization" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewFinalization">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          Finalization
+        </button>
+
+        <button id="navBtnPosExport" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewPosExport">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          POS Export
+        </button>
+
+        <button id="navBtnBackupRestore" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewBackupRestore">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+          Backup & Restore
+        </button>
+
+        <button id="navBtnSettings" class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-[#718096] hover:text-[#26344A] hover:bg-[#F8FAFD] transition-colors" data-target="viewSettings">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="p-3.5 border-t border-[#DFE6F0] bg-[#F8FAFD] text-center">
+        <p class="text-[11px] font-semibold text-[#26344A]">All Rights Reserved &copy; Walkway</p>
+        <p class="text-[10px] text-[#718096] mt-0.5">
+          Developed by <a href="https://metazonbd.com" target="_blank" rel="noopener noreferrer" class="font-bold text-[#3978E8] hover:text-[#2866D4] hover:underline transition-colors">Metazon BD</a>
+        </p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#F4F7FC] overflow-hidden">
+      
+      <!-- Global Top Header -->
+      <header class="h-16 bg-white border-b border-[#DFE6F0] flex items-center justify-between px-3 sm:px-6 z-20">
+        <div class="flex items-center space-x-2 sm:space-x-4 min-w-0">
+          <button id="sidebarToggleBtn" class="p-2 rounded-lg text-[#718096] hover:bg-[#F8FAFD] lg:hidden flex-shrink-0" title="Toggle Navigation">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+          <div class="min-w-0">
+            <div class="flex items-center space-x-2">
+              <h2 id="headerProjectName" class="text-sm sm:text-lg font-bold text-[#26344A] truncate">Walkway Store Audit</h2>
+              <span id="headerStatusBadge" class="text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full font-semibold bg-[#E8F7F2] text-[#12A879] flex-shrink-0">In Progress</span>
+            </div>
+            <p id="headerBreadcrumb" class="hidden sm:block text-xs text-[#718096] truncate">Dashboard &bull; Active Batch: <span id="headerActiveBatchName" class="font-medium text-[#26344A]">Batch #1</span></p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+          <div class="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-[#E8F7F2] text-[#12A879] text-[11px] sm:text-xs font-semibold">
+            <span class="w-2 h-2 rounded-full bg-[#12A879] animate-pulse"></span>
+            <span id="headerOfflineStatus" class="hidden sm:inline">Offline Ready</span>
+          </div>
+
+          <button id="headerQuickScanBtn" class="flex items-center px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#3978E8] text-white hover:bg-[#2866D4] text-xs font-semibold shadow-sm shadow-blue-500/20 transition-all">
+            <svg class="w-4 h-4 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+            <span class="hidden sm:inline">Barcode Scanner</span>
+            <span class="sm:hidden ml-1">Scan</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Scrollable View Container -->
+      <div id="viewContainer" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
+
+        <!-- ========================================== -->
+        <!-- 1. DASHBOARD VIEW -->
+        <!-- ========================================== -->
+        <section id="viewDashboard" class="space-y-4 sm:space-y-6">
+          <div class="bg-gradient-to-r from-white to-[#F8FAFD] border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Inventory Audit Executive Overview</h3>
+              <p class="text-xs sm:text-sm text-[#718096] mt-1">Real-time stock reconciliation and financial variance for Walkway retail operations.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+              <button id="dashGoImportBtn" class="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-xl bg-white border border-[#DFE6F0] text-[#26344A] hover:bg-[#F8FAFD] text-xs font-semibold flex items-center shadow-sm transition-all">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Import POS Sheet
+              </button>
+              <button id="dashGoScanBtn" class="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2 rounded-xl bg-[#3978E8] text-white hover:bg-[#2866D4] text-xs font-semibold flex items-center shadow-sm shadow-blue-500/20 transition-all">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                Start Physical Count
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI Cards Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate">Source Records</span>
+                <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-[#3978E8] flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </span>
+              </div>
+              <p id="kpiSourceRows" class="text-lg sm:text-xl lg:text-2xl font-bold text-[#26344A] mt-2 truncate">0</p>
+              <p id="kpiUniqueSkus" class="text-[11px] text-[#718096] mt-1 truncate">0 Unique SKUs</p>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate">Software Stock</span>
+                <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </span>
+              </div>
+              <p id="kpiSoftwareUnits" class="text-lg sm:text-xl lg:text-2xl font-bold text-[#26344A] mt-2 truncate">0</p>
+              <p class="text-[11px] text-[#718096] mt-1 truncate">POS registered units</p>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate">Final Physical</span>
+                <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-[#12A879] flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </span>
+              </div>
+              <p id="kpiPhysicalUnits" class="text-lg sm:text-xl lg:text-2xl font-bold text-[#12A879] mt-2 truncate">0</p>
+              <p id="kpiCountProgress" class="text-[11px] text-[#718096] mt-1 truncate">0% counted</p>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between" id="kpiNetVarianceCard">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate" id="kpiNetVarianceLabel">Net Variance</span>
+                <span id="kpiNetVarianceIcon" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-50 text-[#E6A23C] flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </span>
+              </div>
+              <p id="kpiNetCostVariance" class="text-lg sm:text-xl lg:text-2xl font-black text-[#26344A] mt-2 truncate">৳0</p>
+              <p id="kpiVarianceUnits" class="text-[11px] text-[#718096] mt-1 truncate">0 Net Units</p>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate">Total Shortage (ঘাটতি)</span>
+                <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 text-[#E65363] flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+                </span>
+              </div>
+              <p id="kpiShortageCost" class="text-lg sm:text-xl lg:text-2xl font-bold text-[#E65363] mt-2 truncate">৳0</p>
+              <p id="kpiShortageSkus" class="text-[11px] text-[#718096] mt-1 truncate">0 Short SKUs</p>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3.5 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div class="flex items-center justify-between text-[#718096] text-xs font-semibold gap-1">
+                <span class="truncate">Total Excess (অতিরিক্ত)</span>
+                <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </span>
+              </div>
+              <p id="kpiExcessCost" class="text-lg sm:text-xl lg:text-2xl font-bold text-teal-600 mt-2 truncate">৳0</p>
+              <p id="kpiExcessSkus" class="text-[11px] text-[#718096] mt-1 truncate">0 Excess SKUs</p>
+            </div>
+          </div>
+
+          <!-- Secondary Metric Strip -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3 sm:p-3.5 flex items-center justify-between min-w-0 shadow-xs hover:border-[#DFE6F0]/80 transition-all">
+              <div class="min-w-0">
+                <p class="text-xs text-[#718096] font-medium truncate">Matched SKUs</p>
+                <p id="kpiMatchedCount" class="text-lg sm:text-xl font-bold text-[#12A879] mt-0.5">0</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#12A879] flex-shrink-0 ml-2"></span>
+            </div>
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3 sm:p-3.5 flex items-center justify-between min-w-0 shadow-xs hover:border-[#DFE6F0]/80 transition-all">
+              <div class="min-w-0">
+                <p class="text-xs text-[#718096] font-medium truncate">Unknown SKUs</p>
+                <p id="kpiUnknownCount" class="text-lg sm:text-xl font-bold text-[#8058D8] mt-0.5">0</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#8058D8] flex-shrink-0 ml-2"></span>
+            </div>
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3 sm:p-3.5 flex items-center justify-between min-w-0 shadow-xs hover:border-[#DFE6F0]/80 transition-all">
+              <div class="min-w-0">
+                <p class="text-xs text-[#718096] font-medium truncate">Uncounted Items</p>
+                <p id="kpiUncountedCount" class="text-lg sm:text-xl font-bold text-[#E6A23C] mt-0.5">0</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#E6A23C] flex-shrink-0 ml-2"></span>
+            </div>
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3 sm:p-3.5 flex items-center justify-between min-w-0 shadow-xs hover:border-[#DFE6F0]/80 transition-all">
+              <div class="min-w-0">
+                <p class="text-xs text-[#718096] font-medium truncate">Confirmed Zero</p>
+                <p id="kpiCountedZeroCount" class="text-lg sm:text-xl font-bold text-[#718096] mt-0.5">0</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#94A3B8] flex-shrink-0 ml-2"></span>
+            </div>
+            <div class="bg-white border border-[#DFE6F0] rounded-xl p-3 sm:p-3.5 flex items-center justify-between min-w-0 col-span-2 sm:col-span-1 lg:col-span-1 shadow-xs hover:border-[#DFE6F0]/80 transition-all">
+              <div class="min-w-0">
+                <p class="text-xs text-[#718096] font-medium truncate">Active Batches</p>
+                <p id="kpiBatchCount" class="text-lg sm:text-xl font-bold text-[#3978E8] mt-0.5">1</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#3978E8] flex-shrink-0 ml-2"></span>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-bold text-[#26344A]">SKU Status Distribution</h4>
+                <span class="text-xs text-[#718096]">Inventory Match Ratio</span>
+              </div>
+              <div class="relative h-56 sm:h-64">
+                <canvas id="chartStatusDist"></canvas>
+              </div>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-bold text-[#26344A]">Stock Valuation Comparison (Sell Price)</h4>
+                <span class="text-xs text-[#718096]">POS Value vs Counted Value (BDT)</span>
+              </div>
+              <div class="relative h-56 sm:h-64">
+                <canvas id="chartValuation"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Top Shortages & Excess List -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-[#26344A]">Highest Shortage Items (Sell Value)</h4>
+                <button id="dashViewAllShortagesBtn" class="text-xs font-semibold text-[#3978E8] hover:underline">View All</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap min-w-[460px]">
+                  <thead>
+                    <tr class="border-b border-[#DFE6F0] text-[#718096]">
+                      <th class="py-2.5 px-2">SKU</th>
+                      <th class="py-2.5 px-2">Product</th>
+                      <th class="py-2.5 px-2 text-right">Sell Price</th>
+                      <th class="py-2.5 px-2 text-right">Short Qty</th>
+                      <th class="py-2.5 px-2 text-right">Short Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashTopShortagesList" class="divide-y divide-gray-100 font-mono">
+                    <tr><td colspan="5" class="py-4 text-center text-gray-400">No shortages recorded yet</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold text-[#26344A]">Highest Excess Items (Sell Value)</h4>
+                <button id="dashViewAllExcessBtn" class="text-xs font-semibold text-[#3978E8] hover:underline">View All</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap min-w-[460px]">
+                  <thead>
+                    <tr class="border-b border-[#DFE6F0] text-[#718096]">
+                      <th class="py-2.5 px-2">SKU</th>
+                      <th class="py-2.5 px-2">Product</th>
+                      <th class="py-2.5 px-2 text-right">Sell Price</th>
+                      <th class="py-2.5 px-2 text-right">Excess Qty</th>
+                      <th class="py-2.5 px-2 text-right">Excess Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashTopExcessList" class="divide-y divide-gray-100 font-mono">
+                    <tr><td colspan="5" class="py-4 text-center text-gray-400">No excess recorded yet</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 2. BEFORE INVENTORY / EXCEL IMPORT VIEW -->
+        <!-- ========================================== -->
+        <section id="viewBeforeInventory" class="hidden space-y-6">
+          <div>
+            <h3 class="text-xl font-bold text-[#26344A]">Before Inventory (POS Sheet Import)</h3>
+            <p class="text-sm text-[#718096]">Upload your Walkway POS stock sheet (.xlsx, .xls) to establish baseline quantities.</p>
+          </div>
+
+          <!-- Required Column Specifications Info Card -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center space-x-2">
+                <span class="w-8 h-8 rounded-lg bg-blue-50 text-[#3978E8] flex items-center justify-center font-bold text-sm flex-shrink-0">📋</span>
+                <div>
+                  <h4 class="text-sm font-bold text-[#26344A]">Excel Column Structure & Dynamic Detection</h4>
+                  <p class="text-xs text-[#718096]">The system dynamically detects headers (case-insensitive & synonyms accepted). Duplicates & size variants are preserved naturally.</p>
+                </div>
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-[#12A879] rounded-lg self-start sm:self-auto">Dynamic Mapping Active</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pt-2">
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-[#3978E8]">1. SKU *</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Barcode or Article ID</p>
+                <span class="inline-block mt-1 text-[10px] text-gray-400">e.g. 562650-1</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-[#3978E8]">2. Product *</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Product Name / Title</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">e.g. Men Leather Loafer</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">3. Location</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Store / Outlet Name</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">e.g. Sreemongal Walkway</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-[#3978E8]">4. Software Qty *</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">POS Registered Stock</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">Numeric (e.g. 10)</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">5. Physical Qty</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Counted units</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">Blank initially</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">6. Purchase Price</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Unit Purchase Cost (BDT)</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">e.g. 1250</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">7. Sell Price</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Retail Selling Price (BDT)</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">e.g. 1850</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">8. Reason</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Discrepancy remark</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">Optional</span>
+              </div>
+              <div class="p-2 sm:p-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs">
+                <span class="font-bold text-gray-700">9. Note</span>
+                <p class="text-[11px] text-gray-600 mt-0.5">Shelf / Tag info</p>
+                <span class="inline-block mt-1 text-gray-400 text-[10px]">Optional</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drag and Drop Dropzone -->
+          <div id="dropZone" class="border-2 border-dashed border-[#DFE6F0] hover:border-[#3978E8] bg-white rounded-2xl p-5 sm:p-8 text-center transition-all cursor-pointer">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-blue-50 text-[#3978E8] flex items-center justify-center mb-3">
+              <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+            <h4 class="text-base font-bold text-[#26344A]">Choose POS Excel file or drag & drop here</h4>
+            <p class="text-xs text-[#718096] mt-1">Accepts standard POS template (.xlsx, .xls). All rows and sizes are preserved directly.</p>
+            <div class="mt-4 flex items-center justify-center gap-3">
+              <button id="browseFileBtn" class="px-5 py-2.5 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4] shadow-sm">Browse POS Excel File</button>
+            </div>
+          </div>
+
+          <!-- Import Progress & Staging Area -->
+          <div id="importStagingArea" class="hidden bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#DFE6F0]">
+              <div>
+                <h4 id="importFileName" class="text-base font-bold text-[#26344A]">Uploaded Sheet</h4>
+                <p id="importFileMeta" class="text-xs text-[#718096]">Data rows detected</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button id="cancelImportBtn" class="px-3 py-1.5 border border-[#DFE6F0] rounded-lg text-xs font-medium text-[#718096] hover:bg-gray-50">Cancel</button>
+                <button id="commitImportBtn" class="px-4 sm:px-5 py-2 bg-[#12A879] text-white rounded-xl text-xs font-semibold hover:bg-emerald-600 shadow-sm flex items-center">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  Confirm & Commit to Database
+                </button>
+              </div>
+            </div>
+
+            <!-- Import Validation Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="p-3 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl">
+                <p class="text-xs text-[#718096]">Total Source Rows</p>
+                <p id="importStatTotalRows" class="text-xl font-bold text-[#26344A]">0</p>
+              </div>
+              <div class="p-3 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl">
+                <p class="text-xs text-[#718096]">Unique SKUs</p>
+                <p id="importStatUniqueSkus" class="text-xl font-bold text-[#3978E8]">0</p>
+              </div>
+              <div class="p-3 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl col-span-2 sm:col-span-1">
+                <p class="text-xs text-[#718096]">POS Software Units</p>
+                <p id="importStatSoftwareUnits" class="text-xl font-bold text-[#12A879]">0</p>
+              </div>
+            </div>
+
+            <!-- Preview Data Table -->
+            <div>
+              <h5 class="text-xs font-bold text-[#718096] uppercase tracking-wider mb-2">Import Preview (First 15 Rows)</h5>
+              <div class="border border-[#DFE6F0] rounded-xl overflow-x-auto max-h-80">
+                <table class="w-full text-left text-xs table-fixed-header min-w-[700px]">
+                  <thead>
+                    <tr class="border-b border-[#DFE6F0] text-[#718096] bg-[#F8FAFD]">
+                      <th class="p-2.5">Row</th>
+                      <th class="p-2.5">SKU</th>
+                      <th class="p-2.5">Product Name</th>
+                      <th class="p-2.5">Location</th>
+                      <th class="p-2.5 text-right">Software Qty</th>
+                      <th class="p-2.5 text-right">Purchase Price</th>
+                      <th class="p-2.5 text-right">Sell Price</th>
+                      <th class="p-2.5">Reason</th>
+                      <th class="p-2.5">Note</th>
+                    </tr>
+                  </thead>
+                  <tbody id="importPreviewTableBody" class="divide-y divide-gray-100 font-mono">
+                    <!-- Injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 3. PHYSICAL SCANNING VIEW -->
+        <!-- ========================================== -->
+        <section id="viewScanning" class="hidden space-y-4 sm:space-y-6">
+          
+          <!-- Large Prominent Active Batch Total Display -->
+          <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div class="space-y-1">
+              <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/20 text-white">Active Counting Session</span>
+              <h3 id="scanActiveBatchHeroName" class="text-xl sm:text-2xl font-black text-white">Batch #1</h3>
+              <p class="text-xs text-blue-100">Live physical counting session. Verify your physical stack/bundle count against the total below.</p>
+            </div>
+            
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-5 sm:px-6 py-2.5 sm:py-3 text-center sm:text-right w-full sm:w-auto min-w-[200px]">
+              <span class="text-[11px] sm:text-xs font-semibold text-blue-100 uppercase tracking-wider block">Total Scanned In This Batch</span>
+              <p id="scanBatchHeroBigCount" class="text-4xl sm:text-5xl font-black text-white leading-none my-1">0</p>
+              <span class="text-[10px] sm:text-[11px] text-blue-200 font-medium">Physical Units Verified</span>
+            </div>
+          </div>
+
+          <!-- Top Scanning Controller -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-[#DFE6F0]">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-[#3978E8] flex items-center justify-center flex-shrink-0">
+                  <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                </div>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <h3 class="text-base sm:text-lg font-bold text-[#26344A]">High-Speed Barcode Scanner</h3>
+                    <span id="scanModeIndicator" class="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-[#E8F7F2] text-[#12A879]">READY (KEYBOARD WEDGE)</span>
+                  </div>
+                  <p class="text-xs text-[#718096]">Scan barcode or enter SKU. Repeated scans of the same SKU automatically increment its quantity.</p>
+                </div>
+              </div>
+
+              <!-- Scanner Audio & Settings Status -->
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="openCameraScanBtn" class="px-3 sm:px-3.5 py-1.5 rounded-lg border border-[#3978E8] bg-blue-50 text-[#3978E8] text-xs font-semibold hover:bg-blue-100 flex items-center shadow-sm">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  Camera Scanner
+                </button>
+                <button id="toggleAudioBtn" class="px-3 py-1.5 rounded-lg border border-[#DFE6F0] text-xs font-medium text-[#718096] hover:bg-gray-50 flex items-center">
+                  <span id="audioStatusIcon" class="mr-1.5 text-[#12A879]">&bull;</span> Audio: <span id="audioStatusText" class="ml-1 font-semibold">ON</span>
+                </button>
+                <button id="scanTempSubmitBtn" class="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-[#8058D8] text-white rounded-xl text-xs font-semibold hover:bg-[#6B44C5] shadow-sm flex items-center">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                  Temporary Submit Batch
+                </button>
+              </div>
+            </div>
+
+            <!-- Focused Scan Input Bar -->
+            <div class="pt-4 sm:pt-6">
+              <div class="relative">
+                <input type="text" id="barcodeScanInput" autocomplete="off" autofocus placeholder="Scan barcode or enter SKU..." class="w-full pl-10 sm:pl-12 pr-24 sm:pr-32 py-3 sm:py-4 bg-[#F8FAFD] border-2 border-[#3978E8] rounded-2xl text-base sm:text-lg font-mono font-bold text-[#26344A] placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-100 scanner-active-ring">
+                <div class="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none text-[#3978E8]">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                </div>
+                <div class="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center space-x-1.5">
+                  <button id="submitScanManualBtn" class="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4]">Enter</button>
+                </div>
+              </div>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 text-xs text-[#718096] gap-1">
+                <span>Shortcut: Press <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded font-mono text-[10px]">F2</kbd> anytime to refocus scanner</span>
+                <span id="scanFeedbackMsg" class="font-semibold text-emerald-600">Ready for scan</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Item & Live Scan Stat Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            
+            <!-- Last Scanned Item Hero Card -->
+            <div class="lg:col-span-2 bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-[#DFE6F0]">
+                <span class="text-xs font-bold text-[#718096] uppercase tracking-wider">Most Recent Scan</span>
+                <span id="lastScanBadge" class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-gray-100 text-gray-600">Awaiting First Scan</span>
+              </div>
+
+              <div id="lastScanDetails" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2 space-y-1">
+                  <p class="text-xs text-[#718096]">SKU Barcode</p>
+                  <p id="lastScanSku" class="text-lg sm:text-xl font-mono font-bold text-[#26344A]">---</p>
+                  <p class="text-xs text-[#718096] mt-2">Product Description</p>
+                  <p id="lastScanProduct" class="text-sm font-semibold text-[#26344A] truncate">---</p>
+                  <p class="text-xs text-[#718096] mt-2">Location & Pricing</p>
+                  <p id="lastScanMeta" class="text-xs text-[#718096]">---</p>
+                </div>
+
+                <div class="bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                  <p class="text-xs font-semibold text-[#718096]">Current Total Physical</p>
+                  <p id="lastScanTotalQty" class="text-3xl sm:text-4xl font-black text-[#3978E8] my-1">0</p>
+                  <p id="lastScanSoftwareQty" class="text-xs text-[#718096]">POS Software: 0</p>
+                  
+                  <!-- Quick Adjust Buttons -->
+                  <div class="flex items-center space-x-1.5 mt-3">
+                    <button id="lastScanMinusBtn" class="w-9 h-9 rounded-lg border border-[#DFE6F0] bg-white text-gray-700 font-bold hover:bg-gray-100 flex items-center justify-center active:scale-95 transition-transform">-1</button>
+                    <button id="lastScanPlusBtn" class="w-9 h-9 rounded-lg border border-[#DFE6F0] bg-white text-[#3978E8] font-bold hover:bg-blue-50 flex items-center justify-center active:scale-95 transition-transform">+1</button>
+                    <button id="lastScanSetQtyBtn" class="px-2.5 h-9 rounded-lg border border-[#DFE6F0] bg-white text-xs font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-transform">Set Qty</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Secondary Actions for current item -->
+              <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                <button id="undoLastScanBtn" class="text-xs font-semibold text-[#E65363] hover:underline flex items-center">
+                  <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                  Undo Last Scan (-1)
+                </button>
+                <button id="markLastZeroBtn" class="text-xs font-semibold text-[#718096] hover:text-[#26344A]">
+                  Mark as Counted Zero
+                </button>
+              </div>
+            </div>
+
+            <!-- Batch Progress Card -->
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between pb-3 border-b border-[#DFE6F0]">
+                  <span class="text-xs font-bold text-[#718096] uppercase tracking-wider">Batch Statistics</span>
+                  <span id="scanActiveBatchNamePill" class="text-xs px-2 py-0.5 rounded font-semibold bg-blue-50 text-[#3978E8]">Batch #1</span>
+                </div>
+                <div class="py-3 sm:py-4 space-y-2.5 sm:space-y-3">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-[#718096]">Batch Total Units:</span>
+                    <span id="scanBatchUnitsCount" class="text-base sm:text-lg font-bold text-[#3978E8]">0 units</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-[#718096]">Unique SKUs in Batch:</span>
+                    <span id="scanBatchSkusCount" class="text-sm font-semibold text-[#26344A]">0 SKUs</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-[#718096]">Total Project Scanned:</span>
+                    <span id="scanTotalProjectUnits" class="text-base sm:text-lg font-bold text-[#12A879]">0 units</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-[#718096]">Unknown Items Captured:</span>
+                    <span id="scanUnknownUnits" class="text-sm font-semibold text-[#8058D8]">0</span>
+                  </div>
+                </div>
+              </div>
+              <button id="scanGoBatchesBtn" class="w-full py-2 border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#26344A] hover:bg-gray-50 text-center mt-3">
+                Manage All Batches &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- Current Batch Items List (Grouped by SKU with direct edit & delete) -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 class="text-sm font-bold text-[#26344A]">Active Batch Items (Grouped by SKU)</h4>
+                <p class="text-xs text-[#718096]">One line per unique SKU. Consecutive scans increase the count. Use buttons to modify or remove.</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span id="batchUniqueItemCountPill" class="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-[#3978E8] rounded-lg">0 unique items</span>
+                <button id="addManualScanEventBtn" class="px-3 py-1.5 bg-[#3978E8] text-white rounded-lg text-xs font-semibold hover:bg-[#2866D4] flex items-center shadow-sm">
+                  <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  Add SKU Manually
+                </button>
+              </div>
+            </div>
+            
+            <div class="border border-[#DFE6F0] rounded-xl overflow-x-auto max-h-80">
+              <table class="w-full text-left text-xs table-fixed-header min-w-[650px]">
+                <thead>
+                  <tr class="border-b border-[#DFE6F0] text-[#718096] bg-[#F8FAFD]">
+                    <th class="p-3">SKU</th>
+                    <th class="p-3">Product Name</th>
+                    <th class="p-3 text-right">Sell Price</th>
+                    <th class="p-3 text-right">POS Software</th>
+                    <th class="p-3 text-right font-bold text-[#3978E8]">Batch Qty</th>
+                    <th class="p-3 text-right font-bold text-[#12A879]">Total Physical</th>
+                    <th class="p-3 text-center">Adjust Qty</th>
+                    <th class="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="batchGroupedItemsTableBody" class="divide-y divide-gray-100 font-mono">
+                  <tr><td colspan="8" class="p-6 text-center text-gray-400">No items scanned in this batch yet. Ready to scan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 4. BATCH MANAGEMENT VIEW -->
+        <!-- ========================================== -->
+        <section id="viewBatches" class="hidden space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold text-[#26344A]">Counting Batch Management</h3>
+              <p class="text-sm text-[#718096]">Organize scanning sessions into distinct batches (racks, aisles, staff members).</p>
+            </div>
+            <button id="createNewBatchBtn" class="px-4 py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4] shadow-sm flex items-center">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Create New Batch
+            </button>
+          </div>
+
+          <div id="batchesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Injected via JS -->
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 5. AUDIT ANALYSIS VIEW -->
+        <!-- ========================================== -->
+        <section id="viewAuditAnalysis" class="hidden space-y-4 sm:space-y-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Reconciliation & Variance Analysis</h3>
+              <p class="text-xs sm:text-sm text-[#718096]">Detailed SKU-level comparison between POS Software stock and verified Physical counts.</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="auditBulkZeroBtn" class="w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 text-xs font-semibold flex items-center shadow-xs transition-all">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Confirm All Filtered Uncounted as Zero
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & Search Toolbar -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+              <div class="relative w-full sm:w-64">
+                <input type="text" id="auditSearchInput" placeholder="Search SKU or Product..." class="w-full pl-9 pr-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs text-[#26344A] focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+              </div>
+
+              <select id="auditStatusFilter" class="w-full sm:w-auto px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs text-[#26344A] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <option value="ALL">All Statuses</option>
+                <option value="Short">Shortage Items</option>
+                <option value="Excess">Excess Items</option>
+                <option value="Matched">Matched Items</option>
+                <option value="Unknown">Unknown SKUs</option>
+                <option value="Uncounted">Uncounted Items</option>
+                <option value="Counted Zero">Counted Zero</option>
+              </select>
+
+              <select id="auditSortFilter" class="w-full sm:w-auto px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs text-[#26344A] font-semibold focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <option value="shortValueDesc">Sort: Shortage Value (High to Low)</option>
+                <option value="excessValueDesc">Sort: Excess Value (High to Low)</option>
+                <option value="varianceAsc">Sort: Variance (Negative to Positive)</option>
+                <option value="varianceDesc">Sort: Variance (Positive to Negative)</option>
+                <option value="skuAsc">Sort: SKU (A-Z)</option>
+              </select>
+            </div>
+
+            <div class="text-xs text-[#718096] whitespace-nowrap self-end md:self-auto font-medium">
+              Showing <span id="auditFilteredCount" class="font-bold text-[#26344A]">0</span> records
+            </div>
+          </div>
+
+          <!-- High-Density Virtualized / Paginated Table -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto max-h-[calc(100vh-320px)] min-h-[350px]">
+              <table class="w-full text-left text-xs table-fixed-header whitespace-nowrap min-w-[1360px]">
+                <thead>
+                  <tr class="border-b border-[#DFE6F0] text-[#718096] bg-[#F8FAFD]">
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap w-[130px]">SKU</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap min-w-[220px] max-w-[320px]">Product Name</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap w-[130px]">Location</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[95px]">Software Qty</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[90px]">Orig Count</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[85px]">Adj (+/-)</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[110px] text-[#26344A]">Final Physical</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[90px]">Variance</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-center w-[110px]">Status</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[105px]">Sell Price</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[110px]">Short Value</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-right w-[110px]">Excess Value</th>
+                    <th class="py-3 px-3.5 font-bold whitespace-nowrap text-center w-[130px]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody" class="divide-y divide-gray-100 font-mono">
+                  <tr><td colspan="13" class="p-8 text-center text-gray-400">Upload an Excel count sheet to begin reconciliation.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Table Pagination Bar -->
+            <div class="p-3 border-t border-[#DFE6F0] bg-[#F8FAFD] flex flex-col sm:flex-row items-center justify-between text-xs text-[#718096] gap-2.5">
+              <div class="flex items-center space-x-2">
+                <span>Rows per page:</span>
+                <select id="auditPageSize" class="bg-white border border-[#DFE6F0] rounded-lg px-2.5 py-1 font-semibold text-[#26344A]">
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <div class="flex items-center space-x-3">
+                <span id="auditPageIndicator">Page 1 of 1</span>
+                <div class="flex space-x-1.5">
+                  <button id="auditPrevPageBtn" class="px-3 py-1 bg-white border border-[#DFE6F0] rounded-lg hover:bg-gray-50 text-gray-700 font-semibold disabled:opacity-40 transition-colors">Previous</button>
+                  <button id="auditNextPageBtn" class="px-3 py-1 bg-white border border-[#DFE6F0] rounded-lg hover:bg-gray-50 text-gray-700 font-semibold disabled:opacity-40 transition-colors">Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 6. AUDIT REPORTS VIEW -->
+        <!-- ========================================== -->
+        <section id="viewReports" class="hidden space-y-6">
+          <div>
+            <h3 class="text-xl font-bold text-[#26344A]">Exportable Audit Reports</h3>
+            <p class="text-sm text-[#718096]">Generate and download itemized reports for audit supervisors, store managers, and accounts.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#3978E8] flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Complete Audit Reconciliation</h4>
+                <p class="text-xs text-[#718096] mt-1">Full inventory dataset with POS Software Qty, Final Physical Qty, Variance, and Financial valuation.</p>
+              </div>
+              <button id="reportExportFullBtn" class="mt-4 w-full py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4] shadow-sm flex items-center justify-center">
+                Download Full Report (.xlsx)
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-rose-50 text-[#E65363] flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Shortage Items Report</h4>
+                <p class="text-xs text-[#718096] mt-1">Filtered list of items with physical count less than POS quantity with financial cost loss.</p>
+              </div>
+              <button id="reportExportShortagesBtn" class="mt-4 w-full py-2 bg-white border border-[#DFE6F0] text-[#E65363] hover:bg-rose-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Shortages (.xlsx)
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Excess Items Report</h4>
+                <p class="text-xs text-[#718096] mt-1">Items found with physical counts exceeding POS software numbers and positive variance.</p>
+              </div>
+              <button id="reportExportExcessBtn" class="mt-4 w-full py-2 bg-white border border-[#DFE6F0] text-teal-600 hover:bg-teal-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Excess (.xlsx)
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-[#8058D8] flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Unknown Barcodes Report</h4>
+                <p class="text-xs text-[#718096] mt-1">All physical products scanned that do not exist in the imported POS catalog.</p>
+              </div>
+              <button id="reportExportUnknownBtn" class="mt-4 w-full py-2 bg-white border border-[#DFE6F0] text-[#8058D8] hover:bg-purple-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Unknown SKUs (.xlsx)
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-[#E6A23C] flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Adjustments Audit Trail</h4>
+                <p class="text-xs text-[#718096] mt-1">Immutable ledger of every manual post-count adjustment, mandatory reason, and reversals.</p>
+              </div>
+              <button id="reportExportAdjustmentsBtn" class="mt-4 w-full py-2 bg-white border border-[#DFE6F0] text-[#E6A23C] hover:bg-amber-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Adjustment Log (.xlsx)
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                </div>
+                <h4 class="text-sm font-bold text-[#26344A]">Batch Summary Report</h4>
+                <p class="text-xs text-[#718096] mt-1">Session-level breakdown of units scanned, timestamps, and submission status by batch.</p>
+              </div>
+              <button id="reportExportBatchesBtn" class="mt-4 w-full py-2 bg-white border border-[#DFE6F0] text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Batch Summary (.xlsx)
+              </button>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 7. ADJUSTMENTS VIEW -->
+        <!-- ========================================== -->
+        <section id="viewAdjustments" class="hidden space-y-4 sm:space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Stock & Price Adjustments</h3>
+              <p class="text-xs sm:text-sm text-[#718096]">Correct counts non-destructively or update prices for unknown/mispriced articles with an immutable audit trail.</p>
+            </div>
+            <button id="backToAuditFromAdjBtn" class="hidden px-3.5 py-1.5 border border-[#DFE6F0] bg-white rounded-xl text-xs font-semibold text-[#26344A] hover:bg-gray-50 flex items-center self-start sm:self-auto">
+              &larr; Back to Audit Table
+            </button>
+          </div>
+
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 sm:pb-4 mb-4 border-b border-[#DFE6F0] gap-3">
+              <h4 class="text-sm font-bold text-[#26344A]">Record New Adjustment</h4>
+              <!-- Adjustment Mode Selector -->
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="text-xs text-[#718096] font-semibold">Adjustment Category:</label>
+                <div class="inline-flex rounded-lg border border-[#DFE6F0] p-1 bg-[#F8FAFD]">
+                  <button id="adjModeQtyBtn" class="px-3 py-1 rounded-md text-xs font-bold bg-[#3978E8] text-white transition-all">Quantity</button>
+                  <button id="adjModePriceBtn" class="px-3 py-1 rounded-md text-xs font-bold text-[#718096] hover:text-[#26344A] transition-all">Price (Purchase / Sell)</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-[#718096] mb-1">Select SKU or Article *</label>
+                <input type="text" id="adjSkuInput" placeholder="Enter SKU (e.g. 562650-1)" class="w-full px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-mono font-bold text-[#26344A] focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <p id="adjProductPreview" class="text-[11px] text-[#718096] mt-1 truncate">Enter SKU to preview product</p>
+              </div>
+
+              <!-- Quantity Mode Controls -->
+              <div id="adjQtyControlsBlock">
+                <label class="block text-xs font-semibold text-[#718096] mb-1">Adjustment Type & Qty *</label>
+                <div class="flex space-x-2">
+                  <select id="adjTypeSelect" class="w-1/2 px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#26344A]">
+                    <option value="increase">Increase (+)</option>
+                    <option value="decrease">Decrease (-)</option>
+                  </select>
+                  <input type="number" id="adjQtyInput" min="1" value="1" class="w-1/2 px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-bold text-[#26344A]">
+                </div>
+              </div>
+
+              <!-- Price Mode Controls (Hidden by default) -->
+              <div id="adjPriceControlsBlock" class="hidden">
+                <label class="block text-xs font-semibold text-[#718096] mb-1">New Unit Prices (BDT) *</label>
+                <div class="flex space-x-2">
+                  <input type="number" id="adjPurchPriceInput" placeholder="Purchase Price" min="0" class="w-1/2 px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-bold text-[#26344A]">
+                  <input type="number" id="adjSellPriceInput" placeholder="Sell Price" min="0" class="w-1/2 px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-bold text-[#26344A]">
+                </div>
+              </div>
+
+              <div class="sm:col-span-2 md:col-span-1">
+                <label class="block text-xs font-semibold text-[#718096] mb-1">Mandatory Reason *</label>
+                <select id="adjReasonSelect" class="w-full px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs text-[#26344A]">
+                  <option value="Physical recount verification">Physical recount verification</option>
+                  <option value="Unknown SKU pricing entered">Unknown SKU pricing entered</option>
+                  <option value="POS price master correction">POS price master correction</option>
+                  <option value="Damaged goods discovered">Damaged goods discovered</option>
+                  <option value="Mislabeled barcode corrected">Mislabeled barcode corrected</option>
+                  <option value="Customer return unrecorded">Customer return unrecorded</option>
+                  <option value="Sample display item returned">Sample display item returned</option>
+                  <option value="Other supervisor override">Other supervisor override</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Preview & Action Bar -->
+            <div class="mt-4 p-3 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs gap-3">
+              <div id="adjPreviewSummaryText" class="flex flex-wrap items-center gap-3 sm:gap-4">
+                <span>Original Count: <strong id="adjPreviewOrig" class="text-[#26344A]">0</strong></span>
+                <span>Current Adjustments: <strong id="adjPreviewCurr" class="text-blue-600">0</strong></span>
+                <span>Final Result: <strong id="adjPreviewFinal" class="text-[#12A879]">0</strong></span>
+              </div>
+              <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button id="cancelAdjustmentBtn" class="flex-1 sm:flex-none px-4 py-2 border border-[#DFE6F0] bg-white rounded-xl text-xs font-semibold text-[#718096] hover:bg-gray-100 hover:text-[#26344A] transition-all">
+                  Cancel / Clear
+                </button>
+                <button id="saveAdjustmentBtn" class="flex-1 sm:flex-none px-5 py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4] shadow-sm transition-all">
+                  Save Adjustment
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Adjustments History Ledger -->
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-5 shadow-sm">
+            <h4 class="text-sm font-bold text-[#26344A] mb-3">Adjustment History Ledger</h4>
+            <div class="border border-[#DFE6F0] rounded-xl overflow-x-auto max-h-80">
+              <table class="w-full text-left text-xs table-fixed-header min-w-[620px]">
+                <thead>
+                  <tr class="border-b border-[#DFE6F0] text-[#718096] bg-[#F8FAFD]">
+                    <th class="p-2.5">Date & Time</th>
+                    <th class="p-2.5">SKU</th>
+                    <th class="p-2.5">Category</th>
+                    <th class="p-2.5">Change Value</th>
+                    <th class="p-2.5">Reason</th>
+                    <th class="p-2.5">Status</th>
+                    <th class="p-2.5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="adjustmentsTableBody" class="divide-y divide-gray-100 font-mono">
+                  <tr><td colspan="7" class="p-4 text-center text-gray-400">No adjustments registered</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 8. FINALIZATION VIEW -->
+        <!-- ========================================== -->
+        <section id="viewFinalization" class="hidden space-y-4 sm:space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Audit Finalization & Lock</h3>
+              <p class="text-xs sm:text-sm text-[#718096]">Review the comprehensive readiness checklist before freezing counts and generating POS exports.</p>
+            </div>
+            <div id="finalStatusBanner" class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-[#3978E8] self-start sm:self-auto">
+              Ready for Review
+            </div>
+          </div>
+
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+            <h4 class="text-sm font-bold text-[#26344A]">Final Audit Verification Checklist</h4>
+            <div id="finalChecklistContainer" class="space-y-2.5">
+              <!-- Dynamically verified items -->
+            </div>
+
+            <div class="pt-4 border-t border-[#DFE6F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <p id="finalizationCheckSummary" class="text-xs text-[#718096]">8 of 8 verification checks must pass.</p>
+              <div class="flex space-x-2 w-full sm:w-auto">
+                <button id="reopenAuditBtn" class="hidden flex-1 sm:flex-none px-4 py-2 border border-amber-300 bg-amber-50 text-amber-800 rounded-xl text-xs font-semibold hover:bg-amber-100">
+                  Controlled Reopening...
+                </button>
+                <button id="finalizeAuditConfirmBtn" class="flex-1 sm:flex-none px-5 py-2.5 bg-[#12A879] text-white rounded-xl text-xs font-bold hover:bg-emerald-600 shadow-sm flex items-center justify-center">
+                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                  Finalize & Lock Audit Project
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 9. POS EXCEL EXPORT VIEW -->
+        <!-- ========================================== -->
+        <section id="viewPosExport" class="hidden space-y-4 sm:space-y-6">
+          <div>
+            <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">POS-Compatible Excel Export</h3>
+            <p class="text-xs sm:text-sm text-[#718096]">Export completed inventory counts in the exact 9-column format required by Walkway POS.</p>
+          </div>
+
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#DFE6F0] gap-2">
+              <div>
+                <h4 class="text-sm font-bold text-[#26344A]">Template Specification Compliance</h4>
+                <p class="text-xs text-[#718096]">Preserves exact sheet name "Worksheet", original row order, and 9-column headers.</p>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-[#12A879] self-start sm:self-auto">9 Columns Compliant</span>
+            </div>
+
+            <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1.5 sm:gap-2 text-center text-xs font-mono">
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>A</strong><br>SKU</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>B</strong><br>Product</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>C</strong><br>Location</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>D</strong><br>Software Qty</div>
+              <div class="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800"><strong>E</strong><br>Physical Qty</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>F</strong><br>Purchase Price</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>G</strong><br>Sell Price</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>H</strong><br>Reason</div>
+              <div class="p-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-lg"><strong>I</strong><br>Note</div>
+            </div>
+
+            <div class="pt-4 flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <button id="downloadPosExcelBtn" class="w-full sm:w-auto px-5 py-2.5 bg-[#3978E8] text-white rounded-xl text-xs font-bold hover:bg-[#2866D4] shadow-sm flex items-center justify-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Download POS Count Sheet (.xlsx)
+              </button>
+              <label class="flex items-center space-x-2 px-3.5 py-2.5 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#26344A] cursor-pointer hover:bg-gray-100 transition-colors w-full sm:w-auto">
+                <input type="checkbox" id="includeUnknownPosCheckbox" class="w-4 h-4 text-[#3978E8] rounded focus:ring-0 cursor-pointer">
+                <span>Include Unknown Scanned SKUs in Sheet</span>
+              </label>
+              <button id="downloadUnknownPosBtn" class="w-full sm:w-auto px-4 py-2.5 bg-white border border-[#DFE6F0] text-[#8058D8] hover:bg-purple-50 rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center">
+                Download Unknown SKUs Separate Sheet (.xlsx)
+              </button>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 10. BACKUP & RESTORE VIEW -->
+        <!-- ========================================== -->
+        <section id="viewBackupRestore" class="hidden space-y-4 sm:space-y-6">
+          <div>
+            <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Project Backup & Restore</h3>
+            <p class="text-xs sm:text-sm text-[#718096]">Transfer audits securely between laptops and ensure offline disaster recovery.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-[#3978E8] flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+              </div>
+              <h4 class="text-base font-bold text-[#26344A]">Create Full Project Backup</h4>
+              <p class="text-xs text-[#718096]">Generates a portable compressed archive (`.walkwaybackup`) with SHA-256 integrity checksum, scan events, and settings.</p>
+              <button id="generateBackupBtn" class="w-full py-2.5 bg-[#3978E8] text-white rounded-xl text-xs font-bold hover:bg-[#2866D4] shadow-sm">
+                Export .walkwaybackup Archive
+              </button>
+            </div>
+
+            <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-50 text-[#8058D8] flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+              </div>
+              <h4 class="text-base font-bold text-[#26344A]">Restore From Backup File</h4>
+              <p class="text-xs text-[#718096]">Restore an audit session from another store device with conflict detection and transactional integrity.</p>
+              <input type="file" id="backupFileInput" accept=".walkwaybackup, .zip, .json" class="hidden">
+              <button id="triggerRestoreBtn" class="w-full py-2.5 bg-white border border-[#DFE6F0] text-[#26344A] hover:bg-gray-50 rounded-xl text-xs font-bold shadow-sm">
+                Select Backup File to Restore
+              </button>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- 11. SETTINGS VIEW -->
+        <!-- ========================================== -->
+        <section id="viewSettings" class="hidden space-y-4 sm:space-y-6">
+          <div>
+            <h3 class="text-lg sm:text-xl font-bold text-[#26344A]">Application Settings</h3>
+            <p class="text-xs sm:text-sm text-[#718096]">Hardware scanner configurations, audio feedback, camera scanner, and local IndexedDB database status.</p>
+          </div>
+
+          <div class="bg-white border border-[#DFE6F0] rounded-2xl p-4 sm:p-6 shadow-sm divide-y divide-[#DFE6F0] space-y-4">
+            
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Camera Barcode Scanning</p>
+                <p class="text-xs text-[#718096]">Use device webcam or mobile/tablet back camera to scan barcodes directly.</p>
+              </div>
+              <input type="checkbox" id="settingCameraToggle" class="w-5 h-5 text-[#3978E8] rounded focus:ring-0 cursor-pointer">
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Professional Scanner Loud Audio (Honeywell/Zebra style)</p>
+                <p class="text-xs text-[#718096]">Play loud, crisp POS retail synthesizer chimes on successful scan and distinct warning alert on error.</p>
+              </div>
+              <input type="checkbox" id="settingAudioToggle" checked class="w-5 h-5 text-[#3978E8] rounded focus:ring-0 cursor-pointer">
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Auto-Submit on Scanner Enter</p>
+                <p class="text-xs text-[#718096]">Automatically commit barcode when the hardware scanner sends an Enter suffix.</p>
+              </div>
+              <input type="checkbox" id="settingAutoSubmitToggle" checked class="w-5 h-5 text-[#3978E8] rounded focus:ring-0 cursor-pointer">
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Keep Scan Input Focused</p>
+                <p class="text-xs text-[#718096]">Automatically return focus to the scanning field after dialogs and button clicks.</p>
+              </div>
+              <input type="checkbox" id="settingKeepFocusedToggle" checked class="w-5 h-5 text-[#3978E8] rounded focus:ring-0 cursor-pointer">
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Operating Currency</p>
+                <p class="text-xs text-[#718096]">Default retail valuation currency symbol.</p>
+              </div>
+              <span class="text-sm font-bold text-[#26344A] px-3 py-1 bg-gray-100 rounded-lg">BDT (৳)</span>
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#26344A]">Software Version & Developer</p>
+                <p class="text-xs text-[#718096]">v1.0.0 &bull; Built for Walkway by Metazon BD (<a href="https://metazonbd.com" target="_blank" rel="noopener noreferrer" class="text-[#3978E8] underline">metazonbd.com</a>)</p>
+              </div>
+              <span class="text-xs px-2.5 py-1 bg-blue-50 text-[#3978E8] font-bold rounded-lg">Enterprise Edition</span>
+            </div>
+
+            <div class="pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-bold text-[#E65363]">Reset Local Database</p>
+                <p class="text-xs text-[#718096]">Clear local IndexedDB stores and reset to a clean state.</p>
+              </div>
+              <button id="resetDatabaseBtn" class="px-4 py-2 border border-rose-300 text-[#E65363] hover:bg-rose-50 rounded-xl text-xs font-semibold">
+                Reset App Data
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODALS & DIALOGS -->
+  <!-- ========================================== -->
+
+  <!-- Modal 1: Camera Barcode Scanner Viewfinder -->
+  <div id="cameraScanModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full max-h-[92vh] overflow-hidden shadow-2xl border border-gray-700 flex flex-col">
+      <div class="p-3.5 sm:p-4 bg-gray-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+          <h4 class="text-sm font-bold">Live Camera Barcode Scanner</h4>
+        </div>
+        <button id="closeCameraScanBtn" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="relative bg-black h-64 sm:h-72 flex items-center justify-center overflow-hidden">
+        <video id="cameraVideo" class="w-full h-full object-cover" autoplay playsinline muted></video>
+        <div class="absolute inset-x-8 sm:inset-x-12 inset-y-8 sm:inset-y-10 border-2 border-dashed border-[#3978E8] rounded-2xl pointer-events-none flex items-center justify-center">
+          <div class="w-full h-0.5 bg-red-500 shadow-lg shadow-red-500/50 animate-pulse"></div>
+        </div>
+      </div>
+      <div class="p-3.5 sm:p-4 bg-white flex items-center justify-between text-xs text-gray-600">
+        <span>Point camera at product barcode / SKU</span>
+        <button id="stopCameraBtn" class="px-3 py-1.5 bg-gray-100 rounded-lg font-semibold hover:bg-gray-200">Close Camera</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add Manual Scan Entry Modal -->
+  <div id="manualScanModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-xl border border-[#DFE6F0] space-y-4">
+      <h4 class="text-base font-bold text-[#26344A]">Add SKU to Batch</h4>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-[#718096] mb-1">SKU / Barcode *</label>
+          <input type="text" id="manualScanSkuInput" placeholder="e.g. 562650-1" class="w-full px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl font-mono font-bold text-sm text-[#26344A]">
+        </div>
+        <div>
+          <label class="block font-semibold text-[#718096] mb-1">Quantity *</label>
+          <input type="number" id="manualScanQtyInput" min="1" value="1" class="w-full px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl font-bold text-sm text-[#26344A]">
+        </div>
+        <div>
+          <label class="block font-semibold text-[#718096] mb-1">Input Method</label>
+          <select id="manualScanTypeInput" class="w-full px-3 py-2 bg-[#F8FAFD] border border-[#DFE6F0] rounded-xl font-semibold text-xs text-[#26344A]">
+            <option value="manual">Manual Entry</option>
+            <option value="scan">Barcode Scan</option>
+            <option value="bulk">Bulk Batch Entry</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button id="manualScanCancelBtn" class="px-3.5 py-2 border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#718096] hover:bg-gray-50">Cancel</button>
+        <button id="manualScanSubmitBtn" class="px-4 py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4]">Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Unknown SKU Capture Dialog -->
+  <div id="unknownSkuModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-xl border border-[#DFE6F0] space-y-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-base font-bold text-[#26344A]">Unknown SKU Detected</h4>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-[#8058D8]">NEW ARTICLE</span>
+      </div>
+      <p class="text-xs text-[#718096]">The barcode was not found in the imported POS catalog. Enter details to capture this physical unit.</p>
+      
+      <div class="space-y-3 font-mono text-xs">
+        <div>
+          <label class="block text-gray-500 font-sans mb-1">SKU Barcode</label>
+          <input type="text" id="modalUnknownSku" readonly class="w-full px-3 py-2 bg-gray-50 border border-[#DFE6F0] rounded-xl font-bold">
+        </div>
+        <div>
+          <label class="block text-gray-500 font-sans mb-1">Product Name (Optional)</label>
+          <input type="text" id="modalUnknownName" placeholder="e.g. Walkway Leather Loafers" class="w-full px-3 py-2 border border-[#DFE6F0] rounded-xl font-sans">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-500 font-sans mb-1">Purchase Price</label>
+            <input type="number" id="modalUnknownPurchase" placeholder="0" class="w-full px-3 py-2 border border-[#DFE6F0] rounded-xl font-sans">
+          </div>
+          <div>
+            <label class="block text-gray-500 font-sans mb-1">Sell Price</label>
+            <input type="number" id="modalUnknownSell" placeholder="0" class="w-full px-3 py-2 border border-[#DFE6F0] rounded-xl font-sans">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button id="modalUnknownSkipBtn" class="px-3.5 py-2 border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#718096] hover:bg-gray-50">Skip Price</button>
+        <button id="modalUnknownSaveBtn" class="px-4 py-2 bg-[#8058D8] text-white rounded-xl text-xs font-semibold hover:bg-purple-700">Save & Count Unit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Set Exact Quantity Dialog -->
+  <div id="setQtyModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-xs w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-xl border border-[#DFE6F0] space-y-4">
+      <h4 class="text-base font-bold text-[#26344A]">Set Direct Quantity</h4>
+      <p id="modalSetQtyProductLabel" class="text-xs text-[#718096] truncate">SKU: ---</p>
+      <input type="number" id="modalSetQtyInput" min="0" value="1" class="w-full px-4 py-3 bg-[#F8FAFD] border-2 border-[#3978E8] rounded-xl text-xl font-bold text-center text-[#26344A]">
+      <div class="flex items-center justify-end space-x-2">
+        <button id="modalSetQtyCancelBtn" class="px-3.5 py-2 border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#718096] hover:bg-gray-50">Cancel</button>
+        <button id="modalSetQtyConfirmBtn" class="px-4 py-2 bg-[#3978E8] text-white rounded-xl text-xs font-semibold hover:bg-[#2866D4]">Update Quantity</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Confirmation Dialog -->
+  <div id="confirmModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-xl border border-[#DFE6F0] space-y-4">
+      <h4 id="confirmModalTitle" class="text-base font-bold text-[#26344A]">Please Confirm</h4>
+      <p id="confirmModalMessage" class="text-xs text-[#718096]">Are you sure you want to perform this action?</p>
+      <div class="flex items-center justify-end space-x-2 pt-2">
+        <button id="confirmModalCancelBtn" class="px-3.5 py-2 border border-[#DFE6F0] rounded-xl text-xs font-semibold text-[#718096] hover:bg-gray-50">Cancel</button>
+        <button id="confirmModalConfirmBtn" class="px-4 py-2 bg-[#E65363] text-white rounded-xl text-xs font-semibold hover:bg-rose-600">Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Application Logic Module Entry Point -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
