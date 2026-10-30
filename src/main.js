@@ -198,6 +198,64 @@ function updateProjectHeader() {
   }
 }
 
+// --- Active Batch State Manager ---
+/**
+ * Safely resolves or initializes the active batch for a project.
+ * Core Guarantee: A batch with status 'submitted' will NEVER be opened automatically on app reload or refresh.
+ * Only 'active' batches can be auto-opened. If all existing batches are submitted, a new active batch is created.
+ */
+export async function getOrInitActiveBatch(projectId) {
+  if (!projectId) return null;
+
+  // 1. Check localStorage for user's last selected active batch
+  try {
+    const savedId = localStorage.getItem(`walkway_active_batch_${projectId}`);
+    if (savedId) {
+      const candidate = await db.scanBatches.get(Number(savedId));
+      if (candidate && candidate.projectId === projectId && candidate.status === 'active') {
+        return candidate;
+      }
+    }
+  } catch (e) {
+    console.warn('LocalStorage error reading active batch:', e);
+  }
+
+  // 2. Query scanBatches for any running batch with status === 'active'
+  const activeBatches = await db.scanBatches
+    .where('projectId').equals(projectId)
+    .filter(b => b.status === 'active')
+    .toArray();
+
+  if (activeBatches.length > 0) {
+    // Pick the most recent active batch (highest sequence)
+    activeBatches.sort((a, b) => (b.sequence || b.id || 0) - (a.sequence || a.id || 0));
+    const chosen = activeBatches[0];
+    try {
+      localStorage.setItem(`walkway_active_batch_${projectId}`, chosen.id);
+    } catch (e) {}
+    return chosen;
+  }
+
+  // 3. If NO active batch exists (all batches are 'submitted' or none exist yet):
+  // NEVER auto-open any submitted batch! Create a brand new active batch!
+  const allBatches = await db.scanBatches.where('projectId').equals(projectId).toArray();
+  const nextSeq = allBatches.length + 1;
+  const newBatchId = await db.scanBatches.add({
+    projectId,
+    name: `Batch #${nextSeq}`,
+    sequence: nextSeq,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    notes: 'Auto-created active batch session'
+  });
+  const newBatch = await db.scanBatches.get(newBatchId);
+  try {
+    localStorage.setItem(`walkway_active_batch_${projectId}`, newBatch.id);
+  } catch (e) {}
+  return newBatch;
+}
+
 // ========================================================
 // 1. DASHBOARD VIEW CONTROLLER
 // ========================================================
@@ -686,6 +744,10 @@ function setupScanningListeners() {
     }
     manualScanModal.classList.add('hidden');
 
+    if (!activeBatch || activeBatch.status === 'submitted') {
+      activeBatch = await getOrInitActiveBatch(currentProject.id);
+    }
+
     await processScanInput({
       projectId: currentProject.id,
       batchId: activeBatch.id,
@@ -755,6 +817,9 @@ function setupCameraScanner() {
   });
 
   openCameraBtn?.addEventListener('click', async () => {
+    if (!activeBatch || activeBatch.status === 'submitted') {
+      activeBatch = await getOrInitActiveBatch(currentProject.id);
+    }
     if (modalBatchName) modalBatchName.textContent = activeBatch?.name || 'Batch #1';
     await updateCameraModalList();
     cameraModal.classList.remove('hidden');
@@ -785,20 +850,8 @@ async function handleScanSubmission(rawSku) {
     if (!currentProject) {
       currentProject = await getActiveProject();
     }
-    if (!activeBatch) {
-      activeBatch = await db.scanBatches.where('projectId').equals(currentProject.id).first();
-      if (!activeBatch) {
-        const id = await db.scanBatches.add({
-          projectId: currentProject.id,
-          name: 'Batch #1',
-          sequence: 1,
-          status: 'active',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          notes: 'Auto-created default batch'
-        });
-        activeBatch = await db.scanBatches.get(id);
-      }
+    if (!activeBatch || activeBatch.status === 'submitted') {
+      activeBatch = await getOrInitActiveBatch(currentProject.id);
     }
 
     if (currentProject.status === 'Finalized') {
@@ -943,6 +996,9 @@ async function markSkuAsCountedZero(sku) {
 }
 
 async function refreshScanningView() {
+  if (!activeBatch || activeBatch.status === 'submitted') {
+    activeBatch = await getOrInitActiveBatch(currentProject.id);
+  }
   document.getElementById('scanActiveBatchNamePill').textContent = activeBatch?.name || 'Batch #1';
   await refreshScanningStats();
   await refreshBatchGroupedItemsTable();
@@ -1118,6 +1174,9 @@ function setupBatchesListeners() {
       notes: ''
     });
     activeBatch = await db.scanBatches.get(id);
+    try {
+      localStorage.setItem(`walkway_active_batch_${currentProject.id}`, activeBatch.id);
+    } catch (e) {}
     updateProjectHeader();
     showToast(`Created ${activeBatch.name}`, 'success');
     refreshBatchesView();
@@ -1144,8 +1203,11 @@ async function handleTemporaryBatchSubmit() {
       notes: ''
     });
     activeBatch = await db.scanBatches.get(newId);
+    try {
+      localStorage.setItem(`walkway_active_batch_${currentProject.id}`, activeBatch.id);
+    } catch (e) {}
     updateProjectHeader();
-    showToast('Batch submitted! Opened new active batch.', 'success');
+    showToast(`Batch submitted! Opened new active batch (${activeBatch.name}).`, 'success');
     refreshScanningView();
   });
 }
@@ -1159,15 +1221,21 @@ async function refreshBatchesView() {
     const units = events.reduce((s, e) => s + (e.quantityDelta || 0), 0);
     const uniqueSkus = new Set(events.map(e => e.sku)).size;
     const isActive = activeBatch && activeBatch.id === b.id;
+    const isSubmitted = b.status === 'submitted';
 
     return `
-      <div class="bg-white border ${isActive ? 'border-2 border-[#3978E8]' : 'border-[#DFE6F0]'} rounded-2xl p-5 shadow-sm space-y-4">
+      <div class="bg-white border ${isActive ? 'border-2 border-[#3978E8] shadow-md' : (isSubmitted ? 'border-[#DFE6F0] bg-slate-50/70' : 'border-[#DFE6F0]')} rounded-2xl p-5 shadow-sm space-y-4 transition-all">
         <div class="flex items-center justify-between pb-3 border-b border-[#DFE6F0]">
           <div>
-            <h4 class="text-sm font-bold text-[#26344A]">${b.name}</h4>
-            <p class="text-[11px] text-[#718096]">${formatDateTime(b.createdAt)}</p>
+            <div class="flex items-center gap-2">
+              <h4 class="text-sm font-bold text-[#26344A]">${b.name}</h4>
+              ${isSubmitted ? '<span class="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded font-bold">SUBMITTED</span>' : ''}
+            </div>
+            <p class="text-[11px] text-[#718096]">
+              Created: ${formatDateTime(b.createdAt)} ${b.submittedAt ? `&bull; Submitted: ${formatDateTime(b.submittedAt)}` : ''}
+            </p>
           </div>
-          <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${b.status === 'active' ? 'bg-[#E8F7F2] text-[#12A879]' : 'bg-gray-100 text-gray-600'}">${b.status}</span>
+          <span class="text-[10px] px-2.5 py-0.5 rounded font-bold uppercase ${b.status === 'active' ? 'bg-[#E8F7F2] text-[#12A879]' : 'bg-amber-100 text-amber-800'}">${b.status}</span>
         </div>
 
         <div class="grid grid-cols-2 gap-3 bg-[#F8FAFD] p-3 rounded-xl text-center">
@@ -1183,10 +1251,10 @@ async function refreshBatchesView() {
 
         <div class="flex items-center justify-between pt-2">
           ${!isActive ? `
-            <button class="batch-activate-btn text-xs font-semibold text-[#3978E8] hover:underline" data-id="${b.id}">
-              Set as Active
+            <button class="batch-activate-btn text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${isSubmitted ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-blue-200 bg-blue-50 text-[#3978E8] hover:bg-blue-100'}" data-id="${b.id}" data-status="${b.status}">
+              ${isSubmitted ? '🔓 Reopen & Set Active' : 'Set as Active'}
             </button>
-          ` : '<span class="text-xs font-semibold text-[#12A879]">&bull; Active Session</span>'}
+          ` : '<span class="text-xs font-semibold text-[#12A879] flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#12A879] animate-pulse"></span> Active Session</span>'}
           
           <button class="batch-delete-btn text-xs text-[#E65363] hover:underline" data-id="${b.id}" data-name="${b.name}">
             Delete Batch
@@ -1199,10 +1267,37 @@ async function refreshBatchesView() {
   container.querySelectorAll('.batch-activate-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = Number(btn.dataset.id);
-      activeBatch = await db.scanBatches.get(id);
-      updateProjectHeader();
-      showToast(`Switched active batch to ${activeBatch.name}`, 'info');
-      refreshBatchesView();
+      const targetBatch = await db.scanBatches.get(id);
+      if (!targetBatch) return;
+
+      if (targetBatch.status === 'submitted') {
+        showConfirm(
+          `Reopen ${targetBatch.name}?`,
+          `This batch was previously submitted. Do you want to manually reopen ${targetBatch.name} and make it active for scanning?`,
+          async () => {
+            targetBatch.status = 'active';
+            targetBatch.reopenedAt = new Date().toISOString();
+            await db.scanBatches.put(targetBatch);
+            activeBatch = targetBatch;
+            try {
+              localStorage.setItem(`walkway_active_batch_${currentProject.id}`, activeBatch.id);
+            } catch (e) {}
+            updateProjectHeader();
+            showToast(`Reopened ${activeBatch.name} and set as active session`, 'success');
+            refreshBatchesView();
+            refreshScanningView();
+          }
+        );
+      } else {
+        activeBatch = targetBatch;
+        try {
+          localStorage.setItem(`walkway_active_batch_${currentProject.id}`, activeBatch.id);
+        } catch (e) {}
+        updateProjectHeader();
+        showToast(`Switched active batch to ${activeBatch.name}`, 'info');
+        refreshBatchesView();
+        refreshScanningView();
+      }
     });
   });
 
@@ -1213,11 +1308,11 @@ async function refreshBatchesView() {
       showConfirm(`Delete ${name}`, 'Are you sure? Scans in this batch will be erased and physical totals updated.', async () => {
         await db.scanEvents.where('batchId').equals(id).delete();
         await db.scanBatches.delete(id);
-        const remaining = await db.scanBatches.where('projectId').equals(currentProject.id).first();
-        if (remaining) activeBatch = remaining;
+        activeBatch = await getOrInitActiveBatch(currentProject.id);
         updateProjectHeader();
         showToast(`${name} deleted`, 'warning');
         refreshBatchesView();
+        refreshScanningView();
       });
     });
   });
@@ -1903,7 +1998,7 @@ function setupExportAndBackupListeners() {
       try {
         const res = await restoreProjectBackup(file);
         currentProject = await db.projects.get(res.newProjectId);
-        activeBatch = await db.scanBatches.where('projectId').equals(currentProject.id).first();
+        activeBatch = await getOrInitActiveBatch(currentProject.id);
         updateProjectHeader();
         await refreshDashboard();
         showToast(`Restored ${res.recordCounts?.sourceRows || 0} rows from backup!`, 'success');
@@ -2014,7 +2109,7 @@ function openUnknownSkuModal(sku, unknownItem) {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     currentProject = await getActiveProject();
-    activeBatch = await db.scanBatches.where('projectId').equals(currentProject.id).first();
+    activeBatch = await getOrInitActiveBatch(currentProject.id);
 
     // Auto-migrate legacy cached status or location from previous sessions
     let projectNeedsUpdate = false;

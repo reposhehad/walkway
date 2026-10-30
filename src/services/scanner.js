@@ -237,6 +237,15 @@ export async function processScanInput({ projectId, batchId, rawInput, inputMeth
     return { success: false, error: 'Empty SKU input' };
   }
 
+  // Safety check: Never permit scanning into a submitted batch
+  if (batchId) {
+    const batch = await db.scanBatches.get(batchId);
+    if (batch && batch.status === 'submitted') {
+      if (soundEnabled) soundEffects.playError();
+      return { success: false, error: `Batch '${batch.name}' is already submitted. Please switch to or create an active batch.` };
+    }
+  }
+
   const sourceMatches = await db.sourceRows.where('projectId').equals(projectId)
     .and(r => r.normalizedSku === normSku)
     .toArray();
