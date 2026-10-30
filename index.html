@@ -1226,16 +1226,45 @@
           <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
           <h4 class="text-sm font-bold">Live Camera Barcode Scanner</h4>
         </div>
-        <button id="closeCameraScanBtn" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+        <button id="closeCameraScanBtn" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800" title="Close Camera">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
-      <div class="relative bg-black min-h-[280px] sm:min-h-[320px] flex items-center justify-center overflow-hidden rounded-b-none">
-        <div id="cameraViewfinder" class="w-full h-full min-h-[280px]"></div>
+
+      <!-- Live Session Counter inside Modal -->
+      <div class="bg-[#F8FAFD] border-b border-[#DFE6F0] px-4 py-2.5 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-[#718096]">Batch:</span>
+          <strong id="cameraModalBatchName" class="text-[#3978E8] font-bold">Batch #1</strong>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <span class="text-[#718096]">Batch Scanned:</span>
+          <span id="cameraModalBatchTotal" class="px-2 py-0.5 rounded-md bg-emerald-100 text-[#12A879] font-mono font-bold text-xs">0 units</span>
+        </div>
       </div>
-      <div class="p-3.5 sm:p-4 bg-white flex items-center justify-between text-xs text-gray-600">
-        <span id="cameraScanStatusText">Point camera at product barcode / SKU</span>
-        <button id="stopCameraBtn" class="px-3 py-1.5 bg-gray-100 rounded-lg font-semibold hover:bg-gray-200">Close Camera</button>
+
+      <div class="relative bg-black min-h-[260px] sm:min-h-[300px] flex items-center justify-center overflow-hidden">
+        <div id="cameraViewfinder" class="w-full h-full min-h-[260px]"></div>
+      </div>
+
+      <!-- Status Feedback & Live Recent Scans List -->
+      <div class="p-3 border-t border-[#DFE6F0] bg-[#F8FAFD]">
+        <div class="flex items-center justify-between mb-2">
+          <span id="cameraScanStatusText" class="text-xs font-semibold text-gray-700">Point camera at product barcode or QR code</span>
+          <span id="cameraScanCountBadge" class="text-[11px] font-bold text-gray-500">0 items in list</span>
+        </div>
+        <div id="cameraRecentScansList" class="bg-white border border-[#DFE6F0] rounded-xl max-h-32 overflow-y-auto divide-y divide-gray-100 font-mono text-xs">
+          <div class="p-3 text-center text-gray-400 font-sans text-xs">Scanned items will appear here live...</div>
+        </div>
+      </div>
+
+      <div class="p-3 bg-white border-t border-[#DFE6F0] flex items-center justify-between">
+        <span class="text-[11px] text-[#718096]">Auto-saves to IndexedDB</span>
+        <button id="stopCameraBtn" class="px-4 py-2 bg-[#3978E8] text-white rounded-xl text-xs font-bold hover:bg-[#2866D4] shadow-sm flex items-center">
+          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          Done Scanning (Close)
+        </button>
       </div>
     </div>
   </div>

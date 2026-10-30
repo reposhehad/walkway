@@ -365,7 +365,10 @@ export async function processScanInput({ projectId, batchId, rawInput, inputMeth
  * Returns grouped list of unique SKUs scanned in a specific batch with total batch quantity.
  */
 export async function getBatchGroupedItems(batchId, projectId) {
-  const events = await db.scanEvents.where('batchId').equals(batchId).toArray();
+  const numBatchId = Number(batchId) || batchId;
+  const events = await db.scanEvents.where('projectId').equals(projectId)
+    .and(e => e.batchId === batchId || e.batchId === numBatchId)
+    .toArray();
 
   // Aggregate quantity per SKU in this batch
   const skuDeltaMap = new Map();
@@ -383,9 +386,15 @@ export async function getBatchGroupedItems(batchId, projectId) {
     totalBatchUnits += batchQty;
 
     // Fetch product details
-    const sourceMatch = await db.sourceRows.where('projectId').equals(projectId).and(r => r.rawSku === sku).first();
-    const unknownMatch = !sourceMatch ? await db.unknownProducts.where('[projectId+sku]').equals([projectId, sku]).first() : null;
-    const countRecord = await db.physicalCounts.where('[projectId+sku]').equals([projectId, sku]).first();
+    const sourceMatch = await db.sourceRows.where('projectId').equals(projectId)
+      .and(r => r.rawSku === sku || r.normalizedSku === sku)
+      .first();
+    const unknownMatch = !sourceMatch 
+      ? (await db.unknownProducts.where('projectId').equals(projectId).and(u => u.sku === sku).first()) 
+      : null;
+    const countRecord = await db.physicalCounts.where('projectId').equals(projectId)
+      .and(c => c.sku === sku)
+      .first();
 
     const prodName = sourceMatch ? sourceMatch.productName : (unknownMatch ? unknownMatch.productName : `Article ${sku}`);
     const location = sourceMatch ? sourceMatch.location : (unknownMatch ? unknownMatch.location : 'Store');

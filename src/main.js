@@ -710,19 +710,53 @@ function setupCameraScanner() {
   const closeCameraBtn = document.getElementById('closeCameraScanBtn');
   const stopCameraBtn = document.getElementById('stopCameraBtn');
   const statusText = document.getElementById('cameraScanStatusText');
+  const modalBatchName = document.getElementById('cameraModalBatchName');
+  const modalBatchTotal = document.getElementById('cameraModalBatchTotal');
+  const recentList = document.getElementById('cameraRecentScansList');
+  const countBadge = document.getElementById('cameraScanCountBadge');
+
+  const updateCameraModalList = async () => {
+    if (!activeBatch || !currentProject) return;
+    const grouped = await getBatchGroupedItems(activeBatch.id, currentProject.id);
+    if (modalBatchName) modalBatchName.textContent = activeBatch.name;
+    if (modalBatchTotal) modalBatchTotal.textContent = `${grouped.totalBatchUnits} units`;
+    if (countBadge) countBadge.textContent = `${grouped.uniqueSkusCount} items in list`;
+
+    if (recentList) {
+      if (grouped.items.length === 0) {
+        recentList.innerHTML = '<div class="p-3 text-center text-gray-400 font-sans text-xs">Scanned items will appear here live...</div>';
+      } else {
+        recentList.innerHTML = grouped.items.slice(0, 10).map(item => `
+          <div class="px-3 py-2 flex items-center justify-between text-xs hover:bg-gray-50 transition-colors">
+            <div class="truncate max-w-[200px]">
+              <span class="font-bold text-[#26344A]">${item.sku}</span>
+              <span class="text-gray-500 font-sans text-[11px] block truncate">${item.productName}</span>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <span class="px-2 py-0.5 rounded bg-blue-50 text-[#3978E8] font-bold text-xs">${item.batchQty} pcs</span>
+              ${item.isUnknown ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-[#8058D8] font-bold">UNK</span>' : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  };
 
   cameraController = new CameraScannerController('cameraViewfinder', async (barcode) => {
     if (statusText) {
       statusText.innerHTML = `<span class="text-emerald-600 font-bold animate-pulse">✓ Scanned: ${barcode}</span>`;
       setTimeout(() => {
-        if (statusText) statusText.textContent = 'Point camera at product barcode / SKU';
+        if (statusText) statusText.textContent = 'Point camera at product barcode or QR code';
       }, 1500);
     }
-    showToast(`Camera scanned: ${barcode}`, 'success');
+    showToast(`Scanned: ${barcode}`, 'success');
     await handleScanSubmission(barcode);
+    await updateCameraModalList();
   });
 
   openCameraBtn?.addEventListener('click', async () => {
+    if (modalBatchName) modalBatchName.textContent = activeBatch?.name || 'Batch #1';
+    await updateCameraModalList();
     cameraModal.classList.remove('hidden');
     if (statusText) statusText.textContent = 'Starting camera & scanner engine...';
     const res = await cameraController.start();
@@ -730,13 +764,16 @@ function setupCameraScanner() {
       showToast(res?.error || 'Unable to access camera.', 'error');
       cameraModal.classList.add('hidden');
     } else {
-      if (statusText) statusText.textContent = 'Point camera at product barcode / SKU';
+      if (statusText) statusText.textContent = 'Point camera at product barcode or QR code';
     }
   });
 
-  const closeCamera = () => {
-    cameraController.stop();
+  const closeCamera = async () => {
+    await cameraController.stop();
     cameraModal.classList.add('hidden');
+    await refreshScanningStats();
+    await refreshBatchGroupedItemsTable();
+    await refreshDashboard();
   };
 
   closeCameraBtn?.addEventListener('click', closeCamera);
@@ -744,50 +781,91 @@ function setupCameraScanner() {
 }
 
 async function handleScanSubmission(rawSku) {
-  if (currentProject.status === 'Finalized') {
-    showToast('Cannot scan: Audit is finalized and locked. Please reopen first.', 'error');
-    return;
+  try {
+    if (!currentProject) {
+      currentProject = await getActiveProject();
+    }
+    if (!activeBatch) {
+      activeBatch = await db.scanBatches.where('projectId').equals(currentProject.id).first();
+      if (!activeBatch) {
+        const id = await db.scanBatches.add({
+          projectId: currentProject.id,
+          name: 'Batch #1',
+          sequence: 1,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          notes: 'Auto-created default batch'
+        });
+        activeBatch = await db.scanBatches.get(id);
+      }
+    }
+
+    if (currentProject.status === 'Finalized') {
+      showToast('Cannot scan: Audit is finalized and locked. Please reopen first.', 'error');
+      return;
+    }
+
+    const result = await processScanInput({
+      projectId: currentProject.id,
+      batchId: activeBatch.id,
+      rawInput: rawSku,
+      inputMethod: 'barcode',
+      soundEnabled: appSettings.audio,
+      quantityDelta: 1
+    });
+
+    if (!result.success) {
+      const scanFeedback = document.getElementById('scanFeedbackMsg');
+      if (scanFeedback) {
+        scanFeedback.textContent = result.error;
+        scanFeedback.className = 'font-semibold text-rose-600';
+      }
+      return;
+    }
+
+    lastScannedItemContext = result;
+
+    // Update hero card
+    const lastSkuEl = document.getElementById('lastScanSku');
+    if (lastSkuEl) lastSkuEl.textContent = result.sku;
+    const lastProdEl = document.getElementById('lastScanProduct');
+    if (lastProdEl) lastProdEl.textContent = result.item?.productName || 'Walkway Article';
+    const lastMetaEl = document.getElementById('lastScanMeta');
+    if (lastMetaEl) lastMetaEl.textContent = `Loc: ${result.item?.location || currentProject.location || 'Store'} \u2022 Cost: ৳${result.item?.purchasePrice || 0} \u2022 Retail: ৳${result.item?.sellPrice || 0}`;
+    const lastTotalEl = document.getElementById('lastScanTotalQty');
+    if (lastTotalEl) lastTotalEl.textContent = result.totalCount;
+    const lastSoftEl = document.getElementById('lastScanSoftwareQty');
+    if (lastSoftEl) lastSoftEl.textContent = `POS Software: ${result.item?.softwareQty || 0}`;
+
+    const badge = document.getElementById('lastScanBadge');
+    if (badge) {
+      if (result.isUnknown) {
+        badge.textContent = 'UNKNOWN SKU';
+        badge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-100 text-[#8058D8]';
+        // Only open modal if camera viewfinder is NOT active
+        const cameraModal = document.getElementById('cameraScanModal');
+        if (cameraModal?.classList.contains('hidden')) {
+          openUnknownSkuModal(result.sku, result.item);
+        }
+      } else {
+        badge.textContent = 'MATCHED CATALOG';
+        badge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#E8F7F2] text-[#12A879]';
+      }
+    }
+
+    const scanFeedback = document.getElementById('scanFeedbackMsg');
+    if (scanFeedback) {
+      scanFeedback.textContent = `Scanned ${result.sku} (${result.totalCount} units)`;
+      scanFeedback.className = 'font-semibold text-emerald-600';
+    }
+
+    await refreshScanningStats();
+    await refreshBatchGroupedItemsTable();
+  } catch (err) {
+    console.error('Scan submission error:', err);
+    showToast(`Error saving scan: ${err.message}`, 'error');
   }
-
-  const result = await processScanInput({
-    projectId: currentProject.id,
-    batchId: activeBatch.id,
-    rawInput: rawSku,
-    inputMethod: 'barcode',
-    soundEnabled: appSettings.audio,
-    quantityDelta: 1
-  });
-
-  if (!result.success) {
-    document.getElementById('scanFeedbackMsg').textContent = result.error;
-    document.getElementById('scanFeedbackMsg').className = 'font-semibold text-rose-600';
-    return;
-  }
-
-  lastScannedItemContext = result;
-
-  // Update hero card
-  document.getElementById('lastScanSku').textContent = result.sku;
-  document.getElementById('lastScanProduct').textContent = result.item?.productName || 'Walkway Article';
-  document.getElementById('lastScanMeta').textContent = `Loc: ${result.item?.location || currentProject.location} \u2022 Cost: ৳${result.item?.purchasePrice || 0} \u2022 Retail: ৳${result.item?.sellPrice || 0}`;
-  document.getElementById('lastScanTotalQty').textContent = result.totalCount;
-  document.getElementById('lastScanSoftwareQty').textContent = `POS Software: ${result.item?.softwareQty || 0}`;
-
-  const badge = document.getElementById('lastScanBadge');
-  if (result.isUnknown) {
-    badge.textContent = 'UNKNOWN SKU';
-    badge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-100 text-[#8058D8]';
-    openUnknownSkuModal(result.sku, result.item);
-  } else {
-    badge.textContent = 'MATCHED CATALOG';
-    badge.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#E8F7F2] text-[#12A879]';
-  }
-
-  document.getElementById('scanFeedbackMsg').textContent = `Scanned ${result.sku} (${result.totalCount} units)`;
-  document.getElementById('scanFeedbackMsg').className = 'font-semibold text-emerald-600';
-
-  await refreshScanningStats();
-  await refreshBatchGroupedItemsTable();
 }
 
 async function handleDirectQuantityChange(sku, deltaOrValue, isDelta = false) {
