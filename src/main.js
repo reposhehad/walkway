@@ -709,10 +709,9 @@ function setupCameraScanner() {
   const cameraModal = document.getElementById('cameraScanModal');
   const closeCameraBtn = document.getElementById('closeCameraScanBtn');
   const stopCameraBtn = document.getElementById('stopCameraBtn');
-  const video = document.getElementById('cameraVideo');
   const statusText = document.getElementById('cameraScanStatusText');
 
-  cameraController = new CameraScannerController(video, async (barcode) => {
+  cameraController = new CameraScannerController('cameraViewfinder', async (barcode) => {
     if (statusText) {
       statusText.innerHTML = `<span class="text-emerald-600 font-bold animate-pulse">✓ Scanned: ${barcode}</span>`;
       setTimeout(() => {

@@ -72,4 +72,20 @@ table, td, th, tr, .font-mono, .copyable-sku, input, span, p, div {
   }
 }
 
+/* Camera Viewfinder Styling */
+#cameraViewfinder {
+  width: 100% !important;
+  border: none !important;
+}
+#cameraViewfinder video {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 380px !important;
+  object-fit: cover !important;
+  border-radius: 0.75rem;
+}
+#cameraViewfinder img {
+  display: none !important;
+}
+
 

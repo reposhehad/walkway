@@ -1,4 +1,4 @@
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { db } from '../database/db.js';
 import { normalizeSku } from '../domain/validation.js';
 
@@ -117,112 +117,112 @@ class AudioSynthesizer {
 export const soundEffects = new AudioSynthesizer();
 
 /**
- * Universal Mobile & Desktop Camera Barcode Scanner Controller powered by ZXing.
- * Supports Code 128, Code 39, EAN-13, EAN-8, UPC-A, UPC-E, QR, ITF, Code 93.
- * Compatible with iOS Safari, Android Chrome, and all desktop browsers.
+ * High-Performance Dual-Engine (Hardware BarcodeDetector + ZXing WASM) Camera Scanner.
+ * Specifically tuned for Mobile & Desktop:
+ * - 1D Retail Barcodes: CODE 128, CODE 39, CODE 93, EAN 13, EAN 8, UPC-A, UPC-E, ITF, CODABAR
+ * - 2D Matrix Codes: QR CODE, DATA MATRIX
  */
 export class CameraScannerController {
-  constructor(videoElement, onScanCallback) {
-    this.video = videoElement;
+  constructor(elementId, onScanCallback) {
+    this.elementId = elementId;
     this.onScan = onScanCallback;
     this.active = false;
+    this.html5QrCode = null;
     this.lastScannedCode = null;
     this.lastScanTime = 0;
     this.cooldownMs = 1500;
-
-    // Configure ZXing hints for retail barcodes
-    const hints = new Map();
-    const formats = [
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.QR_CODE,
-      BarcodeFormat.ITF,
-      BarcodeFormat.CODE_93
-    ];
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-
-    this.codeReader = new BrowserMultiFormatReader(hints, 250);
   }
 
   async start() {
     if (this.active) return { success: true };
-    this.active = true;
-
-    const onResult = (result, err) => {
-      if (!this.active) return;
-      if (result) {
-        const rawText = result.getText()?.trim();
-        if (rawText) {
-          const now = Date.now();
-          if (rawText === this.lastScannedCode && (now - this.lastScanTime) < this.cooldownMs) {
-            return;
-          }
-          this.lastScannedCode = rawText;
-          this.lastScanTime = now;
-
-          soundEffects.playSuccess();
-          this.onScan(rawText);
-        }
-      }
-    };
 
     try {
-      // 1. First attempt: Rear/environment camera with 720p/1080p ideal resolution
-      await this.codeReader.decodeFromConstraints(
-        {
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+      if (!this.html5QrCode) {
+        const formatsToSupport = [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.CODE_93,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.ITF,
+          Html5QrcodeSupportedFormats.CODABAR,
+          Html5QrcodeSupportedFormats.DATA_MATRIX
+        ];
+
+        this.html5QrCode = new Html5Qrcode(this.elementId, {
+          formatsToSupport: formatsToSupport,
+          verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        });
+      }
+
+      this.active = true;
+
+      // Scanning region calculation: wide horizontal rect for 1D barcodes and 2D QR codes
+      const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxWidth = Math.max(Math.floor(viewfinderWidth * 0.88), 260);
+        const qrboxHeight = Math.max(Math.floor(viewfinderHeight * 0.55), 160);
+        return { width: qrboxWidth, height: qrboxHeight };
+      };
+
+      const config = {
+        fps: 20, // 20 scans per second for instant responsiveness
+        qrbox: qrboxFunction,
+        aspectRatio: 1.333333,
+        videoConstraints: {
+          facingMode: { ideal: 'environment' },
+          focusMode: 'continuous'
+        }
+      };
+
+      await this.html5QrCode.start(
+        { facingMode: 'environment' },
+        config,
+        (decodedText, decodedResult) => {
+          if (!this.active) return;
+          const rawText = (decodedText || '').trim();
+          if (rawText) {
+            const now = Date.now();
+            if (rawText === this.lastScannedCode && (now - this.lastScanTime) < this.cooldownMs) {
+              return;
+            }
+            this.lastScannedCode = rawText;
+            this.lastScanTime = now;
+
+            soundEffects.playSuccess();
+            this.onScan(rawText);
           }
         },
-        this.video,
-        onResult
+        (errorMessage) => {
+          // ignore scan frame misses
+        }
       );
+
       return { success: true };
-    } catch (err1) {
-      console.warn('Initial camera constraints failed, attempting generic fallback:', err1);
-      try {
-        // 2. Fallback attempt: any available camera
-        await this.codeReader.decodeFromConstraints(
-          { video: true },
-          this.video,
-          onResult
-        );
-        return { success: true };
-      } catch (err2) {
-        this.active = false;
-        console.error('All camera attempts failed:', err2);
-        return {
-          success: false,
-          error: err2.message || 'Camera permission denied or camera not found'
-        };
-      }
+    } catch (err) {
+      this.active = false;
+      console.error('Camera scanner start error:', err);
+      return {
+        success: false,
+        error: err.message || 'Camera permission denied or camera not found'
+      };
     }
   }
 
-  stop() {
+  async stop() {
     this.active = false;
-    try {
-      this.codeReader.reset();
-    } catch (e) {
-      console.warn('ZXing reset notice:', e);
-    }
-    if (this.video && this.video.srcObject) {
+    if (this.html5QrCode && this.html5QrCode.isScanning) {
       try {
-        const stream = this.video.srcObject;
-        if (stream.getTracks) {
-          stream.getTracks().forEach(t => t.stop());
-        }
-      } catch (e) {
-        // ignore
+        await this.html5QrCode.stop();
+      } catch (err) {
+        console.warn('Error stopping scanner:', err);
       }
-      this.video.srcObject = null;
     }
   }
 }
