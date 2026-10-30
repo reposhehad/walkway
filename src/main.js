@@ -154,6 +154,7 @@ export function switchView(targetViewId) {
     headerBreadcrumb.innerHTML = `${title} &bull; Active Batch: <span class="font-medium text-[#26344A]">${activeBatch?.name || 'Batch #1'}</span>`;
   }
 }
+window.switchView = switchView;
 
 // --- Header Sync ---
 function updateProjectHeader() {
@@ -709,18 +710,28 @@ function setupCameraScanner() {
   const closeCameraBtn = document.getElementById('closeCameraScanBtn');
   const stopCameraBtn = document.getElementById('stopCameraBtn');
   const video = document.getElementById('cameraVideo');
+  const statusText = document.getElementById('cameraScanStatusText');
 
   cameraController = new CameraScannerController(video, async (barcode) => {
-    showToast(`Camera scanned: ${barcode}`, 'info');
+    if (statusText) {
+      statusText.innerHTML = `<span class="text-emerald-600 font-bold animate-pulse">✓ Scanned: ${barcode}</span>`;
+      setTimeout(() => {
+        if (statusText) statusText.textContent = 'Point camera at product barcode / SKU';
+      }, 1500);
+    }
+    showToast(`Camera scanned: ${barcode}`, 'success');
     await handleScanSubmission(barcode);
   });
 
   openCameraBtn?.addEventListener('click', async () => {
     cameraModal.classList.remove('hidden');
+    if (statusText) statusText.textContent = 'Starting camera & scanner engine...';
     const res = await cameraController.start();
     if (!res?.success) {
       showToast(res?.error || 'Unable to access camera.', 'error');
       cameraModal.classList.add('hidden');
+    } else {
+      if (statusText) statusText.textContent = 'Point camera at product barcode / SKU';
     }
   });
 
@@ -2018,6 +2029,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateProjectHeader();
     await refreshDashboard();
+
+    // Check URL query parameter for direct view loading (e.g. ?view=viewScanning)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialView = urlParams.get('view');
+    if (initialView && document.getElementById(initialView)) {
+      switchView(initialView);
+    }
 
     // Initialize PWA Service Worker & Offline Sync
     initPwaSupport();

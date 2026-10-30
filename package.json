@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@zxing/library": "^0.21.3",
     "chart.js": "^4.4.1",
     "dexie": "^3.2.4",
     "jszip": "^3.10.1",

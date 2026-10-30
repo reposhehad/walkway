@@ -1,3 +1,4 @@
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { db } from '../database/db.js';
 import { normalizeSku } from '../domain/validation.js';
 
@@ -116,80 +117,112 @@ class AudioSynthesizer {
 export const soundEffects = new AudioSynthesizer();
 
 /**
- * Camera Barcode Scanner Controller.
+ * Universal Mobile & Desktop Camera Barcode Scanner Controller powered by ZXing.
+ * Supports Code 128, Code 39, EAN-13, EAN-8, UPC-A, UPC-E, QR, ITF, Code 93.
+ * Compatible with iOS Safari, Android Chrome, and all desktop browsers.
  */
 export class CameraScannerController {
   constructor(videoElement, onScanCallback) {
     this.video = videoElement;
     this.onScan = onScanCallback;
-    this.stream = null;
-    this.animFrame = null;
     this.active = false;
-    this.detector = null;
+    this.lastScannedCode = null;
+    this.lastScanTime = 0;
+    this.cooldownMs = 1500;
 
-    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-      try {
-        this.detector = new window.BarcodeDetector({
-          formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code']
-        });
-      } catch {
-        this.detector = null;
-      }
-    }
+    // Configure ZXing hints for retail barcodes
+    const hints = new Map();
+    const formats = [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODE_93
+    ];
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+
+    this.codeReader = new BrowserMultiFormatReader(hints, 250);
   }
 
   async start() {
-    if (this.active) return;
+    if (this.active) return { success: true };
+    this.active = true;
+
+    const onResult = (result, err) => {
+      if (!this.active) return;
+      if (result) {
+        const rawText = result.getText()?.trim();
+        if (rawText) {
+          const now = Date.now();
+          if (rawText === this.lastScannedCode && (now - this.lastScanTime) < this.cooldownMs) {
+            return;
+          }
+          this.lastScannedCode = rawText;
+          this.lastScanTime = now;
+
+          soundEffects.playSuccess();
+          this.onScan(rawText);
+        }
+      }
+    };
+
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      this.video.srcObject = this.stream;
-      await this.video.play();
-      this.active = true;
-      this.scanLoop();
+      // 1. First attempt: Rear/environment camera with 720p/1080p ideal resolution
+      await this.codeReader.decodeFromConstraints(
+        {
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        },
+        this.video,
+        onResult
+      );
       return { success: true };
-    } catch (err) {
-      console.error('Camera access error:', err);
-      return { success: false, error: err.message || 'Camera permission denied or camera not found' };
+    } catch (err1) {
+      console.warn('Initial camera constraints failed, attempting generic fallback:', err1);
+      try {
+        // 2. Fallback attempt: any available camera
+        await this.codeReader.decodeFromConstraints(
+          { video: true },
+          this.video,
+          onResult
+        );
+        return { success: true };
+      } catch (err2) {
+        this.active = false;
+        console.error('All camera attempts failed:', err2);
+        return {
+          success: false,
+          error: err2.message || 'Camera permission denied or camera not found'
+        };
+      }
     }
   }
 
   stop() {
     this.active = false;
-    if (this.animFrame) {
-      cancelAnimationFrame(this.animFrame);
-      this.animFrame = null;
+    try {
+      this.codeReader.reset();
+    } catch (e) {
+      console.warn('ZXing reset notice:', e);
     }
-    if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
-      this.stream = null;
-    }
-    if (this.video) {
-      this.video.srcObject = null;
-    }
-  }
-
-  async scanLoop() {
-    if (!this.active) return;
-
-    if (this.detector && this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+    if (this.video && this.video.srcObject) {
       try {
-        const barcodes = await this.detector.detect(this.video);
-        if (barcodes.length > 0) {
-          const rawVal = barcodes[0].rawValue;
-          if (rawVal) {
-            this.onScan(rawVal);
-            await new Promise(r => setTimeout(r, 900));
-          }
+        const stream = this.video.srcObject;
+        if (stream.getTracks) {
+          stream.getTracks().forEach(t => t.stop());
         }
-      } catch (err) {
-        // Continuous detection cycle
+      } catch (e) {
+        // ignore
       }
-    }
-
-    if (this.active) {
-      this.animFrame = requestAnimationFrame(() => this.scanLoop());
+      this.video.srcObject = null;
     }
   }
 }
