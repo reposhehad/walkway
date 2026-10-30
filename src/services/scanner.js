@@ -294,11 +294,20 @@ export async function processScanInput({ projectId, batchId, rawInput, inputMeth
     });
 
   } else {
-    // Unknown SKU
+    // Unknown SKU (Barcode/QR code not present in initial imported Excel sheet)
     scanResult.isUnknown = true;
 
-    await db.transaction('rw', [db.unknownProducts, db.scanEvents], async () => {
-      let existingUnknown = await db.unknownProducts.where('[projectId+sku]').equals([projectId, normSku]).first();
+    // Fetch store location before opening transaction
+    const firstSourceWithLoc = await db.sourceRows.where('projectId').equals(projectId)
+      .and(r => r.location && r.location.trim() && r.location !== 'Store' && r.location !== 'Main Store')
+      .first();
+    const proj = await db.projects.get(projectId);
+    const storeLocation = firstSourceWithLoc?.location || proj?.location || 'Store';
+
+    await db.transaction('rw', [db.unknownProducts, db.scanEvents, db.sourceRows, db.projects], async () => {
+      let existingUnknown = await db.unknownProducts.where('projectId').equals(projectId)
+        .and(u => u.sku === normSku)
+        .first();
 
       let newCount = quantityDelta;
       if (existingUnknown) {
@@ -309,10 +318,6 @@ export async function processScanInput({ projectId, batchId, rawInput, inputMeth
         });
         scanResult.item = existingUnknown;
       } else {
-        const firstSourceWithLoc = await db.sourceRows.where('projectId').equals(projectId).and(r => r.location && r.location.trim() && r.location !== 'Store' && r.location !== 'Main Store').first();
-        const proj = await db.projects.get(projectId);
-        const storeLocation = firstSourceWithLoc?.location || proj?.location || 'Store';
-
         const id = await db.unknownProducts.add({
           projectId,
           sku: normSku,
